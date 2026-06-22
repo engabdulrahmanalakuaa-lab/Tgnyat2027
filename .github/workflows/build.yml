@@ -18,10 +18,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          # تم إزالة سطر cache: 'npm' لتجنب الحاجة إلى package-lock.json
 
       - name: Install dependencies
         run: npm install
+
+      - name: Download Arabic fonts
+        run: |
+          mkdir -p assets/fonts
+          curl -L -o assets/fonts/Tajawal-Regular.ttf https://github.com/google/fonts/raw/main/ofl/tajawal/Tajawal-Regular.ttf
+          curl -L -o assets/fonts/Tajawal-Bold.ttf https://github.com/google/fonts/raw/main/ofl/tajawal/Tajawal-Bold.ttf
+          curl -L -o assets/fonts/Roboto-Regular.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Regular.ttf
+          curl -L -o assets/fonts/Roboto-Medium.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Medium.ttf
+          curl -L -o assets/fonts/Roboto-Italic.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Italic.ttf
+          curl -L -o assets/fonts/Roboto-MediumItalic.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-MediumItalic.ttf
 
       - name: Rebuild native modules for Electron
         run: npm run rebuild
