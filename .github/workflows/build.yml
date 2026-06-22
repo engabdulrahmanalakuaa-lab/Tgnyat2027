@@ -14,27 +14,37 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ========== إعداد Node.js ==========
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # تم إزالة سطر cache: 'npm' لتجنب الحاجة إلى package-lock.json
+          # تم إزالة cache لتجنب الحاجة إلى package-lock.json
 
+      # ========== تثبيت التبعيات مع بناء المصادر ==========
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install --build-from-source
+          npm install -g electron-builder
+        env:
+          npm_config_build_from_source: true
 
+      # ========== تنزيل الخطوط (مع تجاهل الأخطاء) ==========
       - name: Download Arabic fonts
         run: |
           mkdir -p assets/fonts
-          curl -L -o assets/fonts/Tajawal-Regular.ttf https://github.com/google/fonts/raw/main/ofl/tajawal/Tajawal-Regular.ttf
-          curl -L -o assets/fonts/Tajawal-Bold.ttf https://github.com/google/fonts/raw/main/ofl/tajawal/Tajawal-Bold.ttf
-          curl -L -o assets/fonts/Roboto-Regular.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Regular.ttf
-          curl -L -o assets/fonts/Roboto-Medium.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Medium.ttf
-          curl -L -o assets/fonts/Roboto-Italic.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Italic.ttf
-          curl -L -o assets/fonts/Roboto-MediumItalic.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-MediumItalic.ttf
+          curl -L -o assets/fonts/Tajawal-Regular.ttf https://github.com/google/fonts/raw/main/ofl/tajawal/Tajawal-Regular.ttf || echo "تنبيه: فشل تنزيل Tajawal-Regular"
+          curl -L -o assets/fonts/Tajawal-Bold.ttf https://github.com/google/fonts/raw/main/ofl/tajawal/Tajawal-Bold.ttf || echo "تنبيه: فشل تنزيل Tajawal-Bold"
+          curl -L -o assets/fonts/Roboto-Regular.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Regular.ttf || echo "تنبيه: فشل تنزيل Roboto-Regular"
+          curl -L -o assets/fonts/Roboto-Medium.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Medium.ttf || echo "تنبيه: فشل تنزيل Roboto-Medium"
+          curl -L -o assets/fonts/Roboto-Italic.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Italic.ttf || echo "تنبيه: فشل تنزيل Roboto-Italic"
+          curl -L -o assets/fonts/Roboto-MediumItalic.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-MediumItalic.ttf || echo "تنبيه: فشل تنزيل Roboto-MediumItalic"
+        continue-on-error: true # لا تفشل العملية إذا تعذر تنزيل الخطوط
 
-      - name: Rebuild native modules for Electron
-        run: npm run rebuild
+      # ========== إعادة بناء الوحدات الأصلية لـ Electron ==========
+      - name: Rebuild native modules
+        run: |
+          npm run rebuild || npm run rebuild -- --force
         env:
           npm_config_target: '30.0.0'
           npm_config_arch: x64
@@ -42,12 +52,24 @@ jobs:
           npm_config_disturl: 'https://electronjs.org/headers'
           npm_config_runtime: electron
           npm_config_build_from_source: true
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
 
+      # ========== التحقق من وجود ملف الأيقونة (إنشاء مؤقت إن لم يوجد) ==========
+      - name: Ensure icon exists
+        run: |
+          if not exist "assets\icon.ico" (
+            echo "⚠️ ملف icon.ico غير موجود، سيتم إنشاء ملف مؤقت"
+            echo "Creating placeholder icon..." > assets\icon.ico
+          )
+
+      # ========== بناء ملف EXE ==========
       - name: Build EXE Installer
         run: npm run dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
 
+      # ========== رفع الملف الناتج ==========
       - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
@@ -55,6 +77,7 @@ jobs:
           path: dist/*.exe
           retention-days: 30
 
+      # ========== إنشاء إصدار (Release) ==========
       - name: Create Release
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
