@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022   # استخدم إصداراً يحتوي على VS 2022
 
     steps:
       - name: Checkout repository
@@ -19,9 +19,28 @@ jobs:
         with:
           node-version: '20'
 
+      # تثبيت التبعيات بدون --build-from-source لتجنب البناء المبكر
       - name: Install dependencies
-        run: npm install --build-from-source
+        run: npm install
 
+      # تثبيت @electron/rebuild (الإصدار الجديد)
+      - name: Install @electron/rebuild
+        run: npm install -g @electron/rebuild
+
+      # إعادة بناء الوحدات الأصلية مع تعيين متغيرات البيئة
+      - name: Rebuild native modules for Electron
+        run: npx @electron/rebuild -f -w better-sqlite3 -w node-thermal-printer
+        env:
+          msvs_version: 2022
+          npm_config_target: 30.0.0
+          npm_config_arch: x64
+          npm_config_target_arch: x64
+          npm_config_disturl: https://electronjs.org/headers
+          npm_config_runtime: electron
+          npm_config_build_from_source: true
+          npm_config_fallback_to_build: true
+
+      # تنزيل الخطوط العربية (اختياري، لكن احتفظ بها)
       - name: Download Arabic fonts
         run: |
           mkdir -p assets/fonts
@@ -33,19 +52,7 @@ jobs:
           curl -L -o assets/fonts/Roboto-MediumItalic.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-MediumItalic.ttf || echo "تنبيه: فشل تنزيل Roboto-MediumItalic"
         continue-on-error: true
 
-      - name: Install electron-rebuild globally
-        run: npm install -g electron-rebuild
-
-      - name: Rebuild native modules for Electron
-        run: electron-rebuild -f -w better-sqlite3 -w node-thermal-printer
-        env:
-          npm_config_target: '30.0.0'
-          npm_config_arch: x64
-          npm_config_target_arch: x64
-          npm_config_disturl: 'https://electronjs.org/headers'
-          npm_config_runtime: electron
-          npm_config_build_from_source: true
-
+      # التأكد من وجود الأيقونة
       - name: Ensure icon exists
         run: |
           if not exist "assets\icon.ico" (
@@ -53,12 +60,14 @@ jobs:
             echo "Creating placeholder icon..." > assets\icon.ico
           )
 
+      # بناء المثبت
       - name: Build EXE Installer
         run: npm run dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
 
+      # رفع الملف الناتج
       - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
@@ -66,6 +75,7 @@ jobs:
           path: dist/*.exe
           retention-days: 30
 
+      # إنشاء إصدار (Release)
       - name: Create Release
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
