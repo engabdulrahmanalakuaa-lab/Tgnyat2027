@@ -1,0 +1,62 @@
+{
+  "name": "technologies-soft-pro",
+  "version": "2.0.0",
+  "description": "نظام مطعم متكامل - تقنيات سوفت",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "bcryptjs": "^2.4.3",
+    "node-thermal-printer": "^4.4.0",
+    "pdfmake": "^0.2.7"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-rebuild": "^3.2.9"
+  },
+  "build": {
+    "appId": "com.technologies-soft.pos",
+    "productName": "تقنيات سوفت - مطعم",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "requestedExecutionLevel": "requireAdministrator",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "تقنيات سوفت",
+      "installerLanguages": ["ar"],
+      "language": "1025"
+    },
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!node_modules/.cache/**",
+      "!**/*.md",
+      "!**/*.yml",
+      "!.git/**"
+    ],
+    "extraResources": [],
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**",
+      "**/node_modules/bcryptjs/**"
+    ]
+  }
+}
