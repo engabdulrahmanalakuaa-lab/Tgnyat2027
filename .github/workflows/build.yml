@@ -1,0 +1,56 @@
+name: Build Technologies Soft to EXE
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Rebuild native modules for Electron
+        run: npm run rebuild
+        env:
+          npm_config_target: '30.0.0'
+          npm_config_arch: x64
+          npm_config_target_arch: x64
+          npm_config_disturl: 'https://electronjs.org/headers'
+          npm_config_runtime: electron
+          npm_config_build_from_source: true
+
+      - name: Build EXE Installer
+        run: npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: technologies-soft-installer
+          path: dist/*.exe
+          retention-days: 30
+
+      - name: Create Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: "تقنيات سوفت - إصدار ${{ github.run_number }}"
+          files: dist/*.exe
+          generate_release_notes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
