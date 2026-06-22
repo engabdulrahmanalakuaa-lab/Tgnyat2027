@@ -14,12 +14,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # تثبيت التبعيات مع البناء من المصدر (لبناء better-sqlite3)
+      # تثبيت setuptools لتوفير distutils
+      - name: Install setuptools
+        run: python -m pip install setuptools
+
+      # تثبيت التبعيات مع البناء من المصدر
       - name: Install dependencies with build
         run: npm install --build-from-source
         env:
@@ -32,14 +41,7 @@ jobs:
           npm_config_build_from_source: true
           npm_config_fallback_to_build: true
 
-      # (اختياري) تثبيت Visual Studio Build Tools للتأكيد
-      - name: Install Visual Studio Build Tools (if needed)
-        run: |
-          choco install visualstudio2022buildtools -y
-          choco install visualstudio2022-workload-vctools -y
-        continue-on-error: true
-
-      # تحميل الخطوط العربية
+      # تنزيل الخطوط العربية
       - name: Download Arabic fonts
         run: |
           mkdir -p assets/fonts
@@ -51,7 +53,7 @@ jobs:
           curl -L -o assets/fonts/Roboto-MediumItalic.ttf https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-MediumItalic.ttf || echo "تنبيه: فشل تنزيل Roboto-MediumItalic"
         continue-on-error: true
 
-      # التأكد من وجود الأيقونة (إنشاء مؤقت إن لم تكن موجودة)
+      # التأكد من وجود الأيقونة
       - name: Ensure icon exists
         run: |
           if not exist "assets\icon.ico" (
@@ -74,7 +76,7 @@ jobs:
           npm_config_build_from_source: true
           npm_config_fallback_to_build: true
 
-      # رفع الملف الناتج كـ artifact
+      # رفع الملف الناتج
       - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
@@ -82,7 +84,7 @@ jobs:
           path: dist/*.exe
           retention-days: 30
 
-      # إنشاء إصدار (Release) تلقائي
+      # إنشاء إصدار (Release)
       - name: Create Release
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
